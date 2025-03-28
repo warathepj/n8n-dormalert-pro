@@ -1,5 +1,7 @@
-const express = require('express');
-const cors = require('cors');
+import fetch from 'node-fetch';
+import express from 'express';
+import cors from 'cors';
+
 const app = express();
 
 // Middleware
@@ -12,7 +14,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Notifications endpoint
-app.post('/api/notifications', (req, res) => {
+app.post('/api/notifications', async (req, res) => {
   try {
     const notificationData = req.body;
     
@@ -24,15 +26,21 @@ app.post('/api/notifications', (req, res) => {
       type: notificationData.notificationType,
       dueDate: notificationData.paymentDueDate,
       totalAmount: notificationData.charges.total,
-      monthlyCharges: notificationData.monthlyCharges,  // Added this line
-      charges: {  // Detailed charges breakdown
-        baseRent: notificationData.charges.baseRent,
-        electricityFee: notificationData.charges.electricityFee,
-        waterFee: notificationData.charges.waterFee,
-        internetFee: notificationData.charges.internetFee,
-        parkingFee: notificationData.charges.parkingFee
-      }
+      monthlyCharges: notificationData.monthlyCharges
     });
+
+    // Forward the data to webhook
+    const webhookResponse = await fetch('http://localhost:5678/webhook-test/8906c978-d57f-40c0-b4d0-cbf8736fbaa1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(notificationData)
+    });
+
+    if (!webhookResponse.ok) {
+      throw new Error(`Webhook failed with status: ${webhookResponse.status}`);
+    }
 
     res.status(200).json({
       success: true,
